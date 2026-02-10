@@ -85,7 +85,7 @@ button:hover {
 
 <div class="container">
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN -->
 <div id="loginScreen">
   <h2>Mitr</h2>
   <div class="subtitle">Chat • Connect • Stay Together</div>
@@ -96,14 +96,14 @@ button:hover {
     <button type="submit">Login</button>
   </form>
 
-  <div class="message" id="message"></div>
+  <div class="message" id="loginMsg"></div>
 
   <span class="small-link" onclick="showRegister()">
     Don’t have an account? Create one
   </span>
 </div>
 
-<!-- REGISTER SCREEN -->
+<!-- REGISTER -->
 <div id="registerScreen" style="display:none;">
   <h2>Create Mitr Account</h2>
   <div class="subtitle">One account. Unlimited conversations.</div>
@@ -114,7 +114,7 @@ button:hover {
     <button type="submit">Register</button>
   </form>
 
-  <div class="message" id="regMessage"></div>
+  <div class="message" id="regMsg"></div>
 
   <span class="small-link" onclick="showLogin()">
     Already have an account? Login
@@ -127,6 +127,63 @@ button:hover {
 <script src="supabase.js"></script>
 
 <script>
+/* ELEMENTS */
+const loginScreen = document.getElementById("loginScreen");
+const registerScreen = document.getElementById("registerScreen");
+
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+
+const loginMsg = document.getElementById("loginMsg");
+const regMsg = document.getElementById("regMsg");
+
+/* SCREEN SWITCH */
+function showRegister(){
+  loginScreen.style.display = "none";
+  registerScreen.style.display = "block";
+}
+
+function showLogin(){
+  registerScreen.style.display = "none";
+  loginScreen.style.display = "block";
+}
+
+/* LOGIN */
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginMsg.textContent = "Checking credentials...";
+
+  const u = username.value.trim();
+  const p = password.value.trim();
+
+  const { data, error } = await window.db
+    .from("logininfo")
+    .select("*")
+    .eq("username", u)
+    .maybeSingle();
+
+  if (error || !data) {
+    loginMsg.textContent = "Invalid username";
+    return;
+  }
+
+  if (data.password !== p) {
+    loginMsg.textContent = "Invalid password";
+    return;
+  }
+
+  sessionStorage.clear();
+  sessionStorage.setItem("loginid", data.loginid);
+  sessionStorage.setItem("username", data.username);
+
+  loginMsg.textContent = "Login successful";
+
+  setTimeout(() => {
+    location.replace("chat");
+  }, 600);
+});
+
+/* REGISTER */
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -147,19 +204,15 @@ registerForm.addEventListener("submit", async (e) => {
 
   const { error } = await window.db
     .from("logininfo")
-    .insert({
-      username: username,
-      password: password
-    });
+    .insert({ username, password });
 
-  /* ❌ ERROR → DO NOT CLEAR FORM */
   if (error) {
     regMsg.style.color = "#ff6b6b";
     regMsg.textContent = "Username already exists";
     return;
   }
 
-  /* ✅ SUCCESS → CLEAR FORM */
+  /* ✅ clear only on success */
   usernameInput.value = "";
   passwordInput.value = "";
 
@@ -173,6 +226,6 @@ registerForm.addEventListener("submit", async (e) => {
 });
 </script>
 
-
 </body>
 </html>
+
