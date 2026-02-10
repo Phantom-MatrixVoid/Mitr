@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chat | BNS</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:'Segoe UI',Tahoma;
+  background:#f4f6f9;
+}
+
+/* NAV */
+.top-nav{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#FF9933;
+  padding:15px 40px;
+}
+.nav-box{
+  background:#138808;
+  color:#fff;
+  padding:10px 22px;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:bold;
+}
+.logout-btn{
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* CHAT LIST */
+.chat-container{
+  max-width:900px;
+  margin:30px auto;
+}
+
+.chat-card{
+  padding:18px 22px;
+  border-radius:14px;
+  margin-bottom:15px;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 6px 20px rgba(0,0,0,.08);
+  background:#fff;
+}
+
+/* 🔵 UNREAD */
+.chat-card.unread{
+  background:#e3f2fd;
+  border-left:6px solid #1976d2;
+}
+
+.chat-left{
+  max-width:70%;
+}
+
+.chat-name{
+  font-weight:bold;
+  font-size:17px;
+}
+
+.chat-last{
+  color:#555;
+  margin-top:6px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.chat-right{
+  text-align:right;
+}
+
+.chat-time{
+  font-size:13px;
+  color:#777;
+}
+
+.unread-count{
+  margin-top:6px;
+  display:inline-block;
+  padding:4px 10px;
+  background:#d32f2f;
+  color:white;
+  border-radius:14px;
+  font-size:12px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-nav">
+  <a href="Message" class="nav-box">+ New Chat</a>
+  <span class="logout-btn" onclick="logout()">Logout</span>
+</div>
+
+<div class="chat-container" id="chatList"></div>
+
+<script>
+const myLoginId = Number(sessionStorage.getItem("loginid"));
+if(!myLoginId){
+  location.replace("login");
+}
+
+function logout(){
+  sessionStorage.clear();
+  location.replace("login");
+}
+
+/* LOAD CHATS */
+async function loadChats(){
+  const { data: chats } = await window.db
+    .from("chat_conversations")
+    .select("*")
+    .or(`user1id.eq.${myLoginId},user2id.eq.${myLoginId}`)
+    .order("last_time", { ascending:false });
+
+  const chatList = document.getElementById("chatList");
+  chatList.innerHTML = "";
+
+  for(const chat of chats){
+    const otherName =
+      chat.user1id === myLoginId ? chat.user2name : chat.user1name;
+    const otherId =
+      chat.user1id === myLoginId ? chat.user2id : chat.user1id;
+
+    /* 🔢 COUNT UNREAD MESSAGES */
+    let unreadCount = 0;
+
+    if(chat.unread_for === myLoginId){
+      const { count } = await window.db
+        .from("chat_messages")
+        .select("*", { count:"exact", head:true })
+        .eq("chatid", chat.chatid)
+        .neq("senderid", myLoginId);
+
+      unreadCount = count || 0;
+    }
+
+    const card = document.createElement("div");
+    card.className = "chat-card" + (unreadCount > 0 ? " unread" : "");
+
+    card.onclick = () => {
+      sessionStorage.setItem("chatid", chat.chatid);
+      sessionStorage.setItem("otherid", otherId);
+      sessionStorage.setItem("othername", otherName);
+      location.href = "Read";
+    };
+
+    card.innerHTML = `
+      <div class="chat-left">
+        <div class="chat-name">${otherName}</div>
+        <div class="chat-last">${chat.last_message || ""}</div>
+      </div>
+      <div class="chat-right">
+        <div class="chat-time">${new Date(chat.last_time).toLocaleString()}</div>
+        ${unreadCount > 0 ? `<div class="unread-count">${unreadCount}</div>` : ""}
+      </div>
+    `;
+
+    chatList.appendChild(card);
+  }
+}
+
+loadChats();
+</script>
+
+</body>
+</html>
