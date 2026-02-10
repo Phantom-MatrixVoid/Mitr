@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Chat | BNS</title>
+<title>Mitr | Chats</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
@@ -14,25 +14,48 @@ body{
   background:#f4f6f9;
 }
 
-/* NAV */
+/* TOP NAV */
 .top-nav{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:#FF9933;
-  padding:15px 40px;
-}
-.nav-box{
-  background:#138808;
+  background:linear-gradient(90deg,#FF9933,#138808);
+  padding:16px 40px;
   color:#fff;
-  padding:10px 22px;
+}
+
+.nav-left{
+  display:flex;
+  flex-direction:column;
+}
+
+.welcome{
+  font-size:18px;
+  font-weight:bold;
+}
+
+.sub{
+  font-size:13px;
+  opacity:.9;
+}
+
+.nav-actions{
+  display:flex;
+  gap:12px;
+}
+
+.nav-box{
+  background:#ffffff;
+  color:#138808;
+  padding:10px 18px;
   border-radius:12px;
   text-decoration:none;
   font-weight:bold;
 }
+
 .logout-btn{
-  font-weight:bold;
   cursor:pointer;
+  font-weight:bold;
 }
 
 /* CHAT LIST */
@@ -43,17 +66,22 @@ body{
 
 .chat-card{
   padding:18px 22px;
-  border-radius:14px;
+  border-radius:16px;
   margin-bottom:15px;
   cursor:pointer;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  box-shadow:0 6px 20px rgba(0,0,0,.08);
   background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.08);
+  transition:.2s;
 }
 
-/* 🔵 UNREAD */
+.chat-card:hover{
+  transform:translateY(-2px);
+}
+
+/* UNREAD */
 .chat-card.unread{
   background:#e3f2fd;
   border-left:6px solid #1976d2;
@@ -100,19 +128,37 @@ body{
 
 <body>
 
+<!-- TOP NAV -->
 <div class="top-nav">
-  <a href="Message" class="nav-box">+ New Chat</a>
-  <span class="logout-btn" onclick="logout()">Logout</span>
+  <div class="nav-left">
+    <div class="welcome" id="welcomeText">Welcome</div>
+    <div class="sub">Your conversations</div>
+  </div>
+
+  <div class="nav-actions">
+    <a href="Message" class="nav-box">+ New Chat</a>
+    <span class="logout-btn" onclick="logout()">Logout</span>
+  </div>
 </div>
 
 <div class="chat-container" id="chatList"></div>
 
 <script>
+/* AUTH */
 const myLoginId = Number(sessionStorage.getItem("loginid"));
+const myUsername = sessionStorage.getItem("username");
+
 if(!myLoginId){
   location.replace("login");
 }
 
+/* SHOW WELCOME NAME */
+if(myUsername){
+  document.getElementById("welcomeText").textContent =
+    "Welcome, " + myUsername;
+}
+
+/* LOGOUT */
 function logout(){
   sessionStorage.clear();
   location.replace("login");
@@ -132,10 +178,10 @@ async function loadChats(){
   for(const chat of chats){
     const otherName =
       chat.user1id === myLoginId ? chat.user2name : chat.user1name;
+
     const otherId =
       chat.user1id === myLoginId ? chat.user2id : chat.user1id;
 
-    /* 🔢 COUNT UNREAD MESSAGES */
     let unreadCount = 0;
 
     if(chat.unread_for === myLoginId){
@@ -164,7 +210,9 @@ async function loadChats(){
         <div class="chat-last">${chat.last_message || ""}</div>
       </div>
       <div class="chat-right">
-        <div class="chat-time">${new Date(chat.last_time).toLocaleString()}</div>
+        <div class="chat-time">
+          ${new Date(chat.last_time).toLocaleString()}
+        </div>
         ${unreadCount > 0 ? `<div class="unread-count">${unreadCount}</div>` : ""}
       </div>
     `;
