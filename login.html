@@ -127,87 +127,52 @@ button:hover {
 <script src="supabase.js"></script>
 
 <script>
-const loginScreen = document.getElementById("loginScreen");
-const registerScreen = document.getElementById("registerScreen");
-
-const loginForm = document.getElementById("loginForm");
-const registerForm = document.getElementById("registerForm");
-
-const msg = document.getElementById("message");
-const regMsg = document.getElementById("regMessage");
-
-function showRegister() {
-  loginScreen.style.display = "none";
-  registerScreen.style.display = "block";
-}
-
-function showLogin() {
-  registerScreen.style.display = "none";
-  loginScreen.style.display = "block";
-}
-
-/* LOGIN */
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  msg.textContent = "Checking account...";
-
-  const u = document.getElementById("username").value.trim();
-  const p = document.getElementById("password").value.trim();
-
-  const { data, error } = await window.db
-    .from("logininfo")
-    .select("loginid, username, password")
-    .eq("username", u)
-    .maybeSingle();
-
-  if (error || !data) {
-    msg.textContent = "Account not found";
-    msg.style.color = "#ff6b6b";
-    return;
-  }
-
-  if (p !== data.password) {
-    msg.textContent = "Wrong password";
-    msg.style.color = "#ff6b6b";
-    return;
-  }
-
-  sessionStorage.clear();
-  sessionStorage.setItem("loginid", data.loginid);
-  sessionStorage.setItem("username", data.username);
-
-  msg.style.color = "#4cd137";
-  msg.textContent = "Welcome back to Mitr ✨";
-
-  setTimeout(() => {
-    location.replace("chat");
-  }, 600);
-});
-
-/* REGISTER */
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  regMsg.style.color = "#fff";
   regMsg.textContent = "Creating account...";
 
-  const u = document.getElementById("regUsername").value.trim();
-  const p = document.getElementById("regPassword").value.trim();
+  const usernameInput = document.getElementById("regUsername");
+  const passwordInput = document.getElementById("regPassword");
+
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!username || !password) {
+    regMsg.style.color = "#ff6b6b";
+    regMsg.textContent = "All fields are required";
+    return;
+  }
 
   const { error } = await window.db
     .from("logininfo")
-    .insert({ username: u, password: p });
+    .insert({
+      username: username,
+      password: password
+    });
 
+  /* ❌ ERROR → DO NOT CLEAR FORM */
   if (error) {
-    regMsg.textContent = "Username already exists";
     regMsg.style.color = "#ff6b6b";
+    regMsg.textContent = "Username already exists";
     return;
   }
 
-  regMsg.style.color = "#4cd137";
-  regMsg.textContent = "Account created! Please login";
+  /* ✅ SUCCESS → CLEAR FORM */
+  usernameInput.value = "";
+  passwordInput.value = "";
 
-  setTimeout(showLogin, 800);
+  regMsg.style.color = "#4cd137";
+  regMsg.textContent = "Registration successful! Please login";
+
+  setTimeout(() => {
+    showLogin();
+    regMsg.textContent = "";
+  }, 900);
 });
 </script>
+
 
 </body>
 </html>
