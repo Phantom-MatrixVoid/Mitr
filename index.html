@@ -13,87 +13,110 @@
       background-attachment: fixed;
       background-repeat: no-repeat;
       background-size: cover;
-      color: #fff;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       padding: 20px;
       text-align: center;
+      color: #fff;
     }
 
-    .container {
-      background: rgba(0,0,0,0.65);
-      padding: 40px 30px;
-      border-radius: 20px;
-      max-width: 800px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-      border-top: 8px solid #FF9933;
-      border-bottom: 8px solid #138808;
-      color: white;
-    }
-
-    h1 {
-      color: #000080;
-      font-size: 2.8em;
-      margin-bottom: 20px;
-      text-shadow: 1px 1px 6px rgba(255,255,255,0.7);
-    }
-
-    p {
-      font-size: 1.2em;
-      line-height: 1.6;
-    }
-
-    span.highlight {
-      color: #FFD93D;
-      font-weight: bold;
-    }
-
+    /* TOP BUTTON */
     .login-btn {
       position: absolute;
       top: 20px;
       right: 20px;
-      background-color: #FFD93D;
+      background: #FFD93D;
       color: #0D1117;
-      padding: 12px 22px;
-      border-radius: 10px;
-      font-weight: bold;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
       text-decoration: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      transition: 0.3s;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      transition: all 0.3s ease;
+    }
+    .login-btn:hover {
+      background: #138808;
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.45);
     }
 
-    .login-btn:hover {
-      background-color: #138808;
-      color: #fff;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    /* MAIN CARD */
+    .container {
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      padding: 45px 35px 30px;
+      border-radius: 22px;
+      max-width: 820px;
+      width: 100%;
+      box-shadow: 0 15px 45px rgba(0,0,0,0.45);
+      border-top: 6px solid #FF9933;
+      border-bottom: 6px solid #138808;
+    }
+
+    h1 {
+      font-size: 3em;
+      margin-bottom: 18px;
+      color: #FFD93D;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+    }
+
+    p {
+      font-size: 1.15em;
+      line-height: 1.75;
+      color: #f1f1f1;
+    }
+
+    .highlight {
+      color: #FFD93D;
+      font-weight: 600;
+    }
+
+    /* DIVIDER */
+    .divider {
+      margin: 30px auto 18px;
+      width: 80%;
+      height: 1px;
+      background: rgba(255,255,255,0.25);
+    }
+
+    /* FOOTER (WIKIPEDIA STYLE) */
+    .footer {
+      font-size: 0.85em;
+      color: rgba(255,255,255,0.7);
+      margin-top: 12px;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- LOGIN / START BUTTON -->
+  <!-- START BUTTON -->
   <a href="login" class="login-btn">Get Started</a>
 
-  <!-- MAIN CONTENT -->
+  <!-- CONTENT -->
   <div class="container">
     <h1>Mitr</h1>
+
     <p>
       <span class="highlight">Mitr</span> helps you stay connected with the people
       who matter most.  
       Chat freely, send messages instantly, and never miss a conversation.
-
       <br><br>
-
       Simple. Secure. Real-time.  
       <b>Mitr</b> brings friends closer — one message at a time.
-
       <br><br>
-
-      Built with love to make conversations feel natural.
+      Built with care to make conversations feel natural and human.
     </p>
+
+    <div class="divider"></div>
+
+    <div class="footer">
+      Created by <b>Midhun AV</b>
+    </div>
   </div>
 
 </body>
