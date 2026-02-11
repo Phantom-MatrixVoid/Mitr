@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Reply | Mitr</title>
+<title>Reply | Saathi</title>
 
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -126,6 +126,8 @@ if(!myId || !chatid){
 
 document.getElementById("title").textContent = otherName || "Chat";
 
+const box = document.getElementById("chat");
+
 /* LOAD MESSAGES */
 async function loadMessages(){
   const { data, error } = await window.db
@@ -136,23 +138,26 @@ async function loadMessages(){
 
   if(error) return;
 
-  const box = document.getElementById("chat");
   box.innerHTML = "";
 
-  data.forEach(m => {
-    const div = document.createElement("div");
+  data.forEach(m => addMessage(m));
 
-    /* ✅ FIXED LEFT / RIGHT LOGIC */
-    div.className = "msg " + (String(m.senderid) === myId ? "right" : "left");
+  box.scrollTop = box.scrollHeight;
+}
 
-    div.innerHTML = `
-      ${m.message}
-      <div class="time">${new Date(m.time).toLocaleTimeString()}</div>
-    `;
+/* ADD SINGLE MESSAGE */
+function addMessage(m){
+  const div = document.createElement("div");
 
-    box.appendChild(div);
-  });
+  div.className = "msg " + 
+    (String(m.senderid) === myId ? "right" : "left");
 
+  div.innerHTML = `
+    ${m.message}
+    <div class="time">${new Date(m.time).toLocaleTimeString()}</div>
+  `;
+
+  box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 
@@ -189,8 +194,25 @@ async function sendReply(){
   }).eq("chatid", chatid);
 
   reply.value = "";
-  loadMessages();
 }
+
+/* 🔥 REALTIME LISTENER */
+window.db
+  .channel('chat-room-' + chatid)
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'chat_messages',
+      filter: 'chatid=eq.' + chatid
+    },
+    (payload) => {
+      addMessage(payload.new);
+      markRead();
+    }
+  )
+  .subscribe();
 
 /* BACK */
 function back(){
@@ -200,6 +222,7 @@ function back(){
 markRead();
 loadMessages();
 </script>
+
 
 </body>
 </html>
