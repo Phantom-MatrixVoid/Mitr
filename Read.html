@@ -143,10 +143,11 @@ const box = document.getElementById("chat");
 const replyInput = document.getElementById("reply");
 
 let loadedMessageIds = new Set();
+let lastMessageTime = null;
 
 /* ADD MESSAGE */
 function addMessage(m){
-  if(loadedMessageIds.has(m.id)) return; // prevent duplicate
+  if(loadedMessageIds.has(m.id)) return;
   loadedMessageIds.add(m.id);
 
   const div = document.createElement("div");
@@ -155,14 +156,18 @@ function addMessage(m){
 
   div.innerHTML = `
     ${m.message}
-    <div class="time">${new Date(m.time).toLocaleTimeString()}</div>
+    <div class="time">
+      ${new Date(m.time).toLocaleTimeString()}
+    </div>
   `;
 
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+
+  lastMessageTime = m.time;
 }
 
-/* INITIAL LOAD */
+/* FIRST LOAD */
 async function loadMessages(){
   const { data } = await window.db
     .from("chat_messages")
@@ -174,14 +179,34 @@ async function loadMessages(){
   loadedMessageIds.clear();
 
   data.forEach(m => addMessage(m));
+
+  markRead();
 }
 
-/* MARK READ */
+/* CHECK NEW MESSAGES EVERY 5 SECONDS */
+async function checkNewMessages(){
+  if(!lastMessageTime) return;
+
+  const { data } = await window.db
+    .from("chat_messages")
+    .select("*")
+    .eq("chatid", chatid)
+    .gt("time", lastMessageTime)
+    .order("time", { ascending: true });
+
+  if(data && data.length > 0){
+    data.forEach(m => addMessage(m));
+    markRead();
+  }
+}
+
+/* MARK AS READ */
 async function markRead(){
   await window.db
     .from("chat_conversations")
     .update({ unread_for: null })
-    .eq("chatid", chatid);
+    .eq("chatid", chatid)
+    .eq("unread_for", myId);
 }
 
 /* SEND MESSAGE */
@@ -195,23 +220,34 @@ async function sendReply(){
     .eq("loginid", myId)
     .single();
 
+  const now = new Date().toISOString();
+
   await window.db.from("chat_messages").insert({
     chatid: chatid,
     senderid: myId,
     sendername: me.username,
-    message: text
+    message: text,
+    time: now
   });
 
   await window.db.from("chat_conversations").update({
     last_message: text,
-    last_time: new Date(),
+    last_time: now,
     unread_for: otherId
   }).eq("chatid", chatid);
 
   replyInput.value = "";
+
+  /* Show instantly */
+  addMessage({
+    id: Date.now(),
+    senderid: myId,
+    message: text,
+    time: now
+  });
 }
 
-/* ENTER KEY SEND */
+/* ENTER TO SEND */
 replyInput.addEventListener("keydown", e=>{
   if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
@@ -219,36 +255,14 @@ replyInput.addEventListener("keydown", e=>{
   }
 });
 
-/* REALTIME LISTENER */
-const channel = window.db
-  .channel('chat-room-' + chatid)
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'chat_messages',
-      filter: 'chatid=eq.' + chatid
-    },
-    (payload) => {
-      addMessage(payload.new);
-      markRead();
-    }
-  )
-  .subscribe();
-
-/* CLEANUP */
-window.addEventListener("beforeunload", () => {
-  window.db.removeChannel(channel);
-});
+/* START */
+loadMessages();
+setInterval(checkNewMessages, 2000);
 
 /* BACK */
 function back(){
   location.href = "Chat";
 }
-
-markRead();
-loadMessages();
 </script>
 
 </body>
