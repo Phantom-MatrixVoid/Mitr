@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Reply | Saathi</title>
 
-<!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 
@@ -12,7 +11,7 @@
 body{
   font-family:'Segoe UI',Tahoma,Verdana,sans-serif;
   margin:0;
-  background:#f5f5f5;
+  background:#eef2f7;
 }
 
 /* TOP BAR */
@@ -20,13 +19,14 @@ body{
   position:fixed;
   top:0;left:0;right:0;
   background:#FF9933;
-  padding:15px 30px;
+  padding:16px 30px;
   color:#fff;
   font-weight:bold;
   display:flex;
   justify-content:space-between;
   align-items:center;
   z-index:10;
+  box-shadow:0 2px 10px rgba(0,0,0,.1);
 }
 
 /* CHAT AREA */
@@ -34,26 +34,35 @@ body{
   max-width:900px;
   margin:90px auto 90px;
   padding:20px;
+  height:calc(100vh - 180px);
+  overflow-y:auto;
+  scroll-behavior:smooth;
 }
 
 /* MESSAGE */
 .msg{
   max-width:65%;
   padding:12px 16px;
-  border-radius:14px;
+  border-radius:18px;
   margin-bottom:12px;
   line-height:1.4;
   font-size:15px;
   word-wrap:break-word;
+  animation:fadeIn .2s ease-in;
 }
 
-/* LEFT (THEIR MESSAGE) */
+@keyframes fadeIn{
+  from{opacity:0; transform:translateY(5px);}
+  to{opacity:1; transform:translateY(0);}
+}
+
+/* LEFT */
 .left{
   background:#ffffff;
   border:1px solid #ddd;
 }
 
-/* RIGHT (MY MESSAGE) */
+/* RIGHT */
 .right{
   background:#dcf8c6;
   margin-left:auto;
@@ -82,19 +91,24 @@ textarea{
   flex:1;
   resize:none;
   padding:12px;
-  border-radius:10px;
+  border-radius:12px;
   border:1px solid #ccc;
   font-size:14px;
+  height:45px;
 }
 
 button{
   background:#138808;
   color:#fff;
   border:none;
-  border-radius:10px;
-  padding:0 22px;
+  border-radius:12px;
+  padding:0 24px;
   font-weight:bold;
   cursor:pointer;
+  transition:.2s;
+}
+button:hover{
+  background:#0f6b06;
 }
 </style>
 </head>
@@ -114,7 +128,6 @@ button{
 </div>
 
 <script>
-/* AUTH */
 const myId = String(sessionStorage.getItem("loginid"));
 const chatid = sessionStorage.getItem("chatid");
 const otherId = String(sessionStorage.getItem("otherid"));
@@ -127,28 +140,16 @@ if(!myId || !chatid){
 document.getElementById("title").textContent = otherName || "Chat";
 
 const box = document.getElementById("chat");
+const replyInput = document.getElementById("reply");
 
-/* LOAD MESSAGES */
-async function loadMessages(){
-  const { data, error } = await window.db
-    .from("chat_messages")
-    .select("*")
-    .eq("chatid", chatid)
-    .order("time", { ascending: true });
+let loadedMessageIds = new Set();
 
-  if(error) return;
-
-  box.innerHTML = "";
-
-  data.forEach(m => addMessage(m));
-
-  box.scrollTop = box.scrollHeight;
-}
-
-/* ADD SINGLE MESSAGE */
+/* ADD MESSAGE */
 function addMessage(m){
-  const div = document.createElement("div");
+  if(loadedMessageIds.has(m.id)) return; // prevent duplicate
+  loadedMessageIds.add(m.id);
 
+  const div = document.createElement("div");
   div.className = "msg " + 
     (String(m.senderid) === myId ? "right" : "left");
 
@@ -161,7 +162,21 @@ function addMessage(m){
   box.scrollTop = box.scrollHeight;
 }
 
-/* MARK AS READ */
+/* INITIAL LOAD */
+async function loadMessages(){
+  const { data } = await window.db
+    .from("chat_messages")
+    .select("*")
+    .eq("chatid", chatid)
+    .order("time", { ascending: true });
+
+  box.innerHTML = "";
+  loadedMessageIds.clear();
+
+  data.forEach(m => addMessage(m));
+}
+
+/* MARK READ */
 async function markRead(){
   await window.db
     .from("chat_conversations")
@@ -169,9 +184,9 @@ async function markRead(){
     .eq("chatid", chatid);
 }
 
-/* SEND REPLY */
+/* SEND MESSAGE */
 async function sendReply(){
-  const text = reply.value.trim();
+  const text = replyInput.value.trim();
   if(!text) return;
 
   const { data: me } = await window.db
@@ -193,11 +208,19 @@ async function sendReply(){
     unread_for: otherId
   }).eq("chatid", chatid);
 
-  reply.value = "";
+  replyInput.value = "";
 }
 
-/* 🔥 REALTIME LISTENER */
-window.db
+/* ENTER KEY SEND */
+replyInput.addEventListener("keydown", e=>{
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    sendReply();
+  }
+});
+
+/* REALTIME LISTENER */
+const channel = window.db
   .channel('chat-room-' + chatid)
   .on(
     'postgres_changes',
@@ -214,6 +237,11 @@ window.db
   )
   .subscribe();
 
+/* CLEANUP */
+window.addEventListener("beforeunload", () => {
+  window.db.removeChannel(channel);
+});
+
 /* BACK */
 function back(){
   location.href = "Chat";
@@ -222,7 +250,6 @@ function back(){
 markRead();
 loadMessages();
 </script>
-
 
 </body>
 </html>
