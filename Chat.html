@@ -8,7 +8,6 @@
 <script src="supabase.js"></script>
 
 <style>
-/* ✅ UI NOT CHANGED AT ALL */
 body{
   margin:0;
   font-family:'Segoe UI',Tahoma;
@@ -173,7 +172,6 @@ async function loadChats(){
 
   const currentSnapshot = JSON.stringify(chats);
 
-  /* Only re-render if something changed */
   if(currentSnapshot === lastRendered) return;
   lastRendered = currentSnapshot;
 
@@ -188,20 +186,11 @@ async function loadChats(){
     const otherId =
       chat.user1id === myLoginId ? chat.user2id : chat.user1id;
 
-    let unreadCount = 0;
-
-    if(chat.unread_for === myLoginId){
-      const { count } = await window.db
-        .from("chat_messages")
-        .select("*", { count:"exact", head:true })
-        .eq("chatid", chat.chatid)
-        .neq("senderid", myLoginId);
-
-      unreadCount = count || 0;
-    }
+    /* ✅ Only check unread_for */
+    let isNew = chat.unread_for === myLoginId;
 
     const card = document.createElement("div");
-    card.className = "chat-card" + (unreadCount > 0 ? " unread" : "");
+    card.className = "chat-card" + (isNew ? " unread" : "");
 
     card.onclick = () => {
       sessionStorage.setItem("chatid", chat.chatid);
@@ -219,7 +208,7 @@ async function loadChats(){
         <div class="chat-time">
           ${chat.last_time ? new Date(chat.last_time).toLocaleString() : ""}
         </div>
-        ${unreadCount > 0 ? `<div class="unread-count">${unreadCount}</div>` : ""}
+        ${isNew ? `<div class="unread-count">New</div>` : ""}
       </div>
     `;
 
@@ -227,7 +216,7 @@ async function loadChats(){
   }
 }
 
-/* 🔥 AUTO CHECK EVERY 5 SECONDS */
+/* AUTO REFRESH */
 setInterval(loadChats, 2000);
 
 /* FIRST LOAD */
