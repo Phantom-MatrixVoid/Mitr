@@ -117,16 +117,16 @@ button:hover{
 
 <div class="reply-box">
   <textarea id="reply" placeholder="Type a reply..."></textarea>
-  <button onclick="sendReply()">Send</button>
+  <button id="sendBtn">Send</button>
 </div>
 
 <script>
-const myId = String(sessionStorage.getItem("loginid"));
+const myLoginId = sessionStorage.getItem("loginid");
 const chatid = sessionStorage.getItem("chatid");
-const otherId = String(sessionStorage.getItem("otherid"));
+const otherId = sessionStorage.getItem("otherid");
 const otherName = sessionStorage.getItem("othername");
 
-if(!myId || !chatid){
+if(!myLoginId || !chatid){
   location.replace("Chat");
 }
 
@@ -134,9 +134,11 @@ document.getElementById("title").textContent = otherName || "Chat";
 
 const box = document.getElementById("chat");
 const replyInput = document.getElementById("reply");
+const sendBtn = document.getElementById("sendBtn");
 
 let loadedMessageIds = new Set();
 let lastMessageTime = null;
+let isSending = false;
 
 /* ADD MESSAGE */
 function addMessage(m){
@@ -144,14 +146,11 @@ function addMessage(m){
   loadedMessageIds.add(m.id);
 
   const div = document.createElement("div");
-  div.className = "msg " + 
-    (String(m.senderid) === myId ? "right" : "left");
+  div.className = "msg " + (String(m.senderid) === myLoginId ? "right" : "left");
 
   div.innerHTML = `
     ${m.message}
-    <div class="time">
-      ${new Date(m.time).toLocaleTimeString()}
-    </div>
+    <div class="time">${new Date(m.time).toLocaleTimeString()}</div>
   `;
 
   box.appendChild(div);
@@ -160,7 +159,7 @@ function addMessage(m){
   lastMessageTime = m.time;
 }
 
-/* FIRST LOAD */
+/* LOAD MESSAGES */
 async function loadMessages(){
   const { data, error } = await window.db
     .from("chat_messages")
@@ -174,22 +173,17 @@ async function loadMessages(){
   loadedMessageIds.clear();
   lastMessageTime = null;
 
-  if(data){
-    data.forEach(m => addMessage(m));
-  }
+  if(data) data.forEach(m => addMessage(m));
 
   markRead();
 }
 
 /* CHECK NEW MESSAGES */
 async function checkNewMessages(){
-  if(!lastMessageTime) return;
-
   const { data } = await window.db
     .from("chat_messages")
     .select("*")
     .eq("chatid", chatid)
-    .gt("time", lastMessageTime)
     .order("time", { ascending: true });
 
   if(data && data.length > 0){
@@ -204,45 +198,67 @@ async function markRead(){
     .from("chat_conversations")
     .update({ unread_for: null })
     .eq("chatid", chatid)
-    .eq("unread_for", myId);
+    .eq("unread_for", myLoginId);
 }
 
-/* SEND MESSAGE (FIXED) */
+/* SEND MESSAGE */
 async function sendReply(){
+  if(isSending) return;
+  isSending = true;
+  sendBtn.disabled = true;
+
   const text = replyInput.value.trim();
-  if(!text) return;
+  if(!text){
+    isSending = false;
+    sendBtn.disabled = false;
+    return;
+  }
 
-  const { data: me } = await window.db
-    .from("logininfo")
-    .select("username")
-    .eq("loginid", myId)
-    .single();
+  try{
+    // Get my username
+    const { data: me } = await window.db
+      .from("logindata")
+      .select("username")
+      .eq("id", myLoginId)
+      .single();
 
-  const { data: inserted, error } = await window.db
-    .from("chat_messages")
-    .insert({
-      chatid: chatid,
-      senderid: myId,
-      sendername: me.username,
-      message: text
-    })
-    .select()
-    .single();
+    // Insert message
+    const { data: inserted, error } = await window.db
+      .from("chat_messages")
+      .insert({
+        chatid: chatid,
+        senderid: myLoginId,
+        sendername: me.username,
+        message: text
+      })
+      .select()
+      .single();
 
-  if(error) return;
+    if(error){
+      console.error(error);
+      isSending = false;
+      sendBtn.disabled = false;
+      return;
+    }
 
-  await window.db
-    .from("chat_conversations")
-    .update({
-      last_message: text,
-      unread_for: otherId
-    })
-    .eq("chatid", chatid);
+    // Update last message & unread_for in conversation
+    await window.db
+      .from("chat_conversations")
+      .update({
+        last_message: text,
+        unread_for: otherId
+      })
+      .eq("chatid", chatid);
 
-  replyInput.value = "";
+    replyInput.value = "";
+    addMessage(inserted);
 
-  /* Display using SERVER timestamp */
-  addMessage(inserted);
+  }catch(err){
+    console.error(err);
+  }
+
+  isSending = false;
+  sendBtn.disabled = false;
 }
 
 /* ENTER TO SEND */
